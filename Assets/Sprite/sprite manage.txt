@@ -1,0 +1,29 @@
+file name
+
+outgame-front/setting... (-export)
+ingame-base/explosion/outball .... -conseptXXX(-export)
+
+<인게임>
+ingame-Cannon-skin1 32pix per 1unit
+ingame-Ball-skin1 32pix per 1unit
+ingame-item+effect 32pix per 1unit
+ingame-backgroung-skin1
+ingame-eventeffect
+ingame-specialeffect (indicator, skill icon etc)
+
+<시작화면>
+outgame-startscreen (button and logo) (record, skin manage, the other mode?, competition(ranking))
+outgame-setting (button)
+
+explosion animation - 128 * 128 -> 16 * 32*32
+
+outball -> 320 * 320 -> 1 image
+
+basic -> 160 * 160 after exporting -> 1600 * 1600
+
+2d rigid, physic 이 들어가는 요소에 대해서는
+32*32로 꽉 채우거나, 따로 분류해서 auto slice를 통해 추후에 collider 에 대해서는
+auto tilting이 용이하게끔
+
+스킨 관리 용이하도록... 대포, 대포알은 세트 / ball은 따로 / 테마 / 배경 따로?
+나중에 스킨 관리에 대해 정확히 알게 되면 그때하기
