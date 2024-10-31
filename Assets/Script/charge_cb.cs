@@ -12,57 +12,17 @@ public class charge_cb : MonoBehaviour
     public float cbslot = 5; //초기 충전된 대포 슬롯
     public GameObject chargebar; // UI에서 충전 막대를 나타내는 sprite
     public SpriteRenderer chargebarRenderer; //item에서 충전 막대 색상을 조정하기 위해 선언
+    public ChargedPool chargePool; // ChargedPool 스크립트 참조
+    private List<GameObject> activeChargeIndicators; // 활성화된 프리팹 목록
 
-    /*
-    public Animator chargebar_ani; //animation 불러오기 inspector 창에서 drag and drop
-    private bool canExecuteAni = true;
-    */
-
-    // Start is called before the first frame update
     void Start()
     //시작하자마자 spawnprefabs을 새로운 list로 선언하고, 하트 5개를 리스트에 채우기, 차지리셋을 통해 bar 원위치
     {
-        //chargebar_ani = GetComponent<Animator>(); //animation get component
-        spawnedPrefabs = new List<GameObject>();
-        SpawnMethodRepetition(5);
-        ResetCharge();
+        activeChargeIndicators = new List<GameObject>();
         chargebarRenderer = GetComponent<SpriteRenderer>();
-
-        fortest();
+        InitializeCharges((int)cbslot); // 초기 충전 슬롯 초기화
+        ResetCharge();
     }
-
-        private IEnumerator fortest()
-    {
-        Color originalChargebarcolor = chargebarRenderer.color;
-        chargebarRenderer.color = Color.white; 
-        chargebarRenderer.color = Color.red;   // 색상 변경
-        yield return new WaitForSeconds(3f);  // 대기
-        //chargebarRenderer.color = originalChargebarcolor;  // 색상 복구
-    }
-
-    public GameObject chargefullprefab;            // 생성할 프리팹
-    public Transform[] chargeSpawnP;      // 5개의 위치를 저장할 배열
-    private List<GameObject> spawnedPrefabs; // 생성된 프리팹을 관리할 리스트
-
-    public void Spawnchargefullprefab()
-    {
-         // 현재 리스트의 크기가 스폰 포인트의 범위를 초과하지 않는지 확인
-        if (spawnedPrefabs.Count >= chargeSpawnP.Length)
-        {
-            Debug.LogError("모든 스폰 포인트에 프리팹이 이미 생성되었습니다.");
-            return;
-        }
-
-        // 현재 리스트의 크기를 인덱스로 사용
-        int index = spawnedPrefabs.Count;
-
-        // 특정 인덱스 위치에 프리팹을 생성
-        GameObject newPrefab = Instantiate(chargefullprefab, chargeSpawnP[index].position, chargeSpawnP[index].rotation);
-
-        spawnedPrefabs.Add(newPrefab);
-    }
-
-    // Update is called once per frame
 
     void Update() //실시간으로 cbslot 갯수 확인하여 조건에 따라 충전시간이 흘러가게 하고, 그 비율에 따라 bar 변환
     {
@@ -78,69 +38,65 @@ public class charge_cb : MonoBehaviour
             if(time > chargetime)
             {
                 cbslot += 1;
-                Spawnchargefullprefab();
+                AddChargeSlot();
                 // 충전될 때마다 prefab 생성
                 time = 0;
                 ResetCharge();
             }
         }
-        else //cbslot이 다 채워진 경우.
-        {
-
-        } 
     }
 
     public void ResetCharge()
     {   
         time = 0f;
         chargebar.transform.localScale = new Vector3(1f, 0f, 1f); // 초기 상태
-        Debug.Log("충전 초기화됨.");
     }
 
-    /*
-    void ExecuteAni()
+    public void AddChargeSlot()
     {
-        chargebar_ani.SetTrigger("chargebar_charge");  //ani 작동
-        // 메서드를 실행하고, 일정 시간 동안 다시 실행되지 않도록 설정
-        canExecuteAni= false;
-        // 3초 후에 다시 메서드 실행 가능하도록 설정
-        Invoke("EnableMethod", 2f);
-    }
-
-    void EnableMethod()
-    {
-        canExecuteAni = true;
-    }
-    */
-
-        // 리스트에 있는 프리팹을 제거
-    public void DestroyLastPrefab()
-    {
-        if (spawnedPrefabs.Count > 0) // 리스트에 프리팹이 있을 경우
+        GameObject newIndicator = chargePool.ActivatePooledObject(); //pool 관리, 활성화 시킴
+        if (newIndicator != null)
         {
-            // 마지막 프리팹 가져오기
-            int lastIndex = spawnedPrefabs.Count - 1;
-            GameObject prefabToDestroy = spawnedPrefabs[lastIndex];
+            int index = activeChargeIndicators.Count; //활성화된 프리팹 목록 개수를 index에 넣음
 
-            // 프리팹 제거
-            Destroy(prefabToDestroy);
-
-            // 리스트에서 제거
-            spawnedPrefabs.RemoveAt(lastIndex);
-
-            Debug.Log($"{prefabToDestroy.name} 삭제됨.");
-        }
-        else
-        {
-            Debug.LogWarning("제거할 프리팹이 없습니다.");
+            if (index < chargePool.chargeSpawnPoints.Length) //index값이 스폰 포인트 전체 개수볻 작으면 실행(오류 방지)
+            {
+                // 지정된 위치에 프리팹을 활성화 및 위치 설정
+                newIndicator.transform.SetPositionAndRotation(
+                chargePool.chargeSpawnPoints[index].position,
+                chargePool.chargeSpawnPoints[index].rotation
+            );
+                activeChargeIndicators.Add(newIndicator); //활성화된 목록에 넣기
+            }
         }
     }
 
-        void SpawnMethodRepetition(int times)
+    public void AfterFireCannon() //fire_ball 에서 사용할 매서드
     {
-        for (int i = 0; i < times; i++) //int는 0으로 시작해서 times 보다 같아지기 직전까지 +1씩 더하며 아래 반복
+        if (cbslot > 0)
         {
-            Spawnchargefullprefab(); // 반복할 메서드 호출
+            cbslot -= 1;
+            RemoveLastChargeIndicator();
+        }
+    }
+
+    public void RemoveLastChargeIndicator()
+    {
+        if (activeChargeIndicators.Count > 0)
+        {
+            int lastIndex = activeChargeIndicators.Count - 1;
+            GameObject lastIndicator = activeChargeIndicators[lastIndex];
+
+            chargePool.DeactivatePooledObject(lastIndicator); // 프리팹 비활성화 //pool 관리
+            activeChargeIndicators.RemoveAt(lastIndex); //활성화된 프리팹에서 삭제
+        }
+    }
+
+        void InitializeCharges(int times)
+    {
+        for (int i = 0; i < times; i++)
+        {
+            AddChargeSlot(); // 초기 충전 슬롯 활성화
         }
     }
 

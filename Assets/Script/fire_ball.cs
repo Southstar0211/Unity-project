@@ -11,16 +11,18 @@ public class fire_ball : MonoBehaviour
 {
     public float cannonballspd;
     //public GameObject cannonball;
-    public CannonballPool cannonballPool;
-
+    public CannonballPool cannonballPool; //풀링 관리
+    public charge_cb chargecbsript;
     private UnityEngine.Vector2 lookDirection;
     private float lookAngle;
     public Transform cannontip; //transform은 위치와 회전과 관련된.
     // Start is called before the first frame update
     private float minAngle = -70f; // 최소 회전 각도
     private float maxAngle = 70f; // 최대 회전 각도 
-    public charge_cb chargecbsript;
+    
 
+    // 특정 Y 좌표 이상으로 올라가면 반환할 값 + 공이 올라갈 수 있는 최대값 보다 작게 설정해야 최적화.
+    public float maxYPosition = 20f;
 
     void Start()
     {
@@ -78,10 +80,12 @@ public class fire_ball : MonoBehaviour
             if(chargecbsript.cbslot > 0)
             {
                 FireCannnonball();
-
+                /*
                 chargecbsript.cbslot -= 1;
                 //cbslot 채워진 거 하나를 지워야 함. 마지막으로 채워진 거... 있는 cbslot 중 가장 큰 숫자 slot을 destroy? 
                 chargecbsript.DestroyLastPrefab();
+                */
+                chargecbsript.AfterFireCannon(); //충전표시 관리
             }
             else //cbslot이 0일 때.
             {
@@ -101,10 +105,12 @@ public class fire_ball : MonoBehaviour
         Rigidbody2D rb = firedCannonball.GetComponent<Rigidbody2D>();
         rb.velocity = cannontip.up * cannonballspd;
 
-        //Destroy(firedCannonball, 3.5f);
-        StartCoroutine(ReturnCannonballAfterDelay(firedCannonball, 3.5f));
-    }
+        StartCheckingYPosition(firedCannonball);
 
+        //Destroy(firedCannonball, 3.5f);
+        //StartCoroutine(ReturnCannonballAfterDelay(firedCannonball, 3.5f));
+    }
+    /*
     private IEnumerator ReturnCannonballAfterDelay(GameObject cannonball, float delay)
     {
         yield return new WaitForSeconds(delay);
@@ -114,6 +120,41 @@ public class fire_ball : MonoBehaviour
         {
             // 캐논볼을 풀로 반환
             cannonballPool.ReturnCannonball(cannonball);
+            Debug.Log("시간이 지나 반환");
+        }
+    }
+    */
+    private void StartCheckingYPosition(GameObject cannonball)
+    {
+    StartCoroutine(WaitUntilNearMaxY(cannonball));
+    }
+
+    // 특정 y 값에 도달할 때까지 대기하고, 해당 위치에 도달하면 위치 확인 코루틴 실행
+    private IEnumerator WaitUntilNearMaxY(GameObject cannonball)
+    {
+        while (cannonball.activeInHierarchy)
+        {
+            // 기준 값에 가까워지면 CheckYPosition 실행 후 대기 코루틴 종료
+            if (cannonball.transform.position.y >= maxYPosition * 0.8f) // 기준 y 값의 80%에 도달했을 때만
+            {
+                StartCoroutine(CheckYPosition(cannonball));
+                yield break;
+            }
+            yield return null; // 매 프레임마다 위치 체크
+        }
+    }
+    // Y 위치가 기준을 넘으면 반환
+    private IEnumerator CheckYPosition(GameObject cannonball)
+    {
+        while (cannonball.activeInHierarchy)
+        {
+            if (cannonball.transform.position.y > maxYPosition)
+            {
+                cannonballPool.ReturnCannonball(cannonball);
+                Debug.Log("Y 위치 초과로 반환");
+                yield break;
+            }
+            yield return new WaitForSeconds(0.5f); // 0.5초 간격으로 체크
         }
     }
 

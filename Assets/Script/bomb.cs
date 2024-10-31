@@ -8,12 +8,15 @@ using System;
 public class bomb : MonoBehaviour
 {
     // Start is called before the first frame update
-    public GameObject explosionPrefab; // 폭발 이펙트 프리팹
-    public float explosionRadius = 1.5f; // 폭발 반경
-    public float explosionForce = 10f; // 폭발 힘
+    //public GameObject explosionPrefab; // 폭발 이펙트 프리팹 (오브젝트 풀링하면서 필요없어짐.)
+    public float explosionRadius = 1.2f; // 폭발 반경
+    public float explosionForce = 8f; // 폭발 힘
     //private ICannonballPool cannonballPool; (interface 방식)
 
     public static event Action<GameObject> OnCannonballCollision;
+    public static event Action<Vector3, float> OnExplode;
+
+    private float ExplosionNoShowHeight = 8.3f; //최적화를 위함(특정 높이 이상에서는 굳이 폭발 이펙트를 풀링할 필요 X)
 
     /* (interface 방식)
     private void Start()
@@ -32,9 +35,9 @@ public class bomb : MonoBehaviour
     }
     */
 
-    void OnCollisionEnter2D(Collision2D collision)  //지금 폭발 반경이 맞는지도 모르겠고... 정확한 백터 값으로 공에 힘이 가해지는지도 모르겠다.
+    void OnCollisionEnter2D(Collision2D collision) 
     {
-        Explode(collision);
+            Explode(collision);
     }
 
     void Explode(Collision2D collision)
@@ -42,16 +45,22 @@ public class bomb : MonoBehaviour
         // 충돌 시 이벤트 호출 (풀에 반환할 오브젝트를 전달) //event 방식
         OnCannonballCollision?.Invoke(gameObject);
 
+        //특정 높이 이상에서는 프리팹 호출 X
+        if (transform.position.y <= ExplosionNoShowHeight) 
+        {
+            OnExplode?.Invoke(transform.position, explosionRadius); //explosionRadius를 폭발 프리팹 크기에 참고할 수 있게 전송
+        }
+        /*
         // 폭발 이펙트 생성 필요
         float diameter = explosionRadius*2;
-        GameObject newexplosion = Instantiate(explosionPrefab, transform.position, Quaternion.identity);
-        newexplosion.transform.localScale = new Vector3(diameter, diameter, 1f);
-        Destroy(newexplosion, 0.55f);
-        //기존 이펙트 length가 1.333초인데 2.5배속해서 0.53초 애니메이션이 진행됨. 넉넉잡아서 0.55초 뒤 destroy
+        GameObject explosionEffect = explosionpool.GetExplosion(transform.position, Quaternion.identity);
+        explosionEffect.transform.localScale = new Vector3(diameter, diameter, 1f);
+        */
         
         //폭발 반경 내의 모든 오브젝트에 힘 적용하기 위해 collider2D[] 리스트에 hitcolliders를 넣고(폭발 반경 내 모든 오브젝트)
         //아래 foreach를 통해 [] 리스트 내에 각 오브젝트에 동일한 내용을 반복함.
-        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position, explosionRadius);
+        //explosionRadius 라는 값을 반지름으로 하는 원 안에 물리를 적용함.
+        Collider2D[] hitColliders = Physics2D.OverlapCircleAll(transform.position, explosionRadius); 
         foreach (var hitCollider in hitColliders)  //foreach 때문에 최적화에 문제가 있는 듯... 이거 해결 *****
         {
             if (hitCollider.CompareTag("ball"))
@@ -75,8 +84,10 @@ public class bomb : MonoBehaviour
                 }
             }
         }
+        
     //cannonballPool.ReturnCannonball(gameObject); (interface방식)
     }
+
 /*
 
     void OnDrawGizmos()

@@ -27,13 +27,12 @@ a-> b -> c -> a
 public class CannonballPool : MonoBehaviour//, ICannonballPool
 {
     public GameObject cannonballPrefab; // 캐논볼 프리팹
-    private int poolSize = 10;           // 초기 풀 크기
+    private int poolSize = 8;           // 초기 풀 크기
     private List<Cannonball> pool;      // Cannonball 객체 리스트
-
-
-
+    private GameObject poolParent;
     private void Awake()
     {
+        poolParent = new GameObject("Cannonballpool"); //게임 오브젝트 생성
         pool = new List<Cannonball>();
 
         //풀사이즈 만큼 미리 프리팹 생성
@@ -43,12 +42,16 @@ public class CannonballPool : MonoBehaviour//, ICannonballPool
             Cannonball cannonball = cannonballObject.AddComponent<Cannonball>(); //cannonballObject를 cannonball로서 선언
             cannonball.SetInPool(true); // 초기에는 풀에 포함된 상태로 설정
             cannonballObject.SetActive(false);
+
+            // 생성된 캐논볼을 부모 오브젝트 아래에 넣기
+            cannonballObject.transform.SetParent(poolParent.transform);
+
             pool.Add(cannonball);
         }
         bomb.OnCannonballCollision += ReturnCannonball;
     }
 
-    private void OnDestroy()
+    private void OnDestroy() //ondestroy()는 자동적으로 사용되는 것으로서, 씬이 끝나거나 하면 자동적으로 구독을 해제하여 메모리 절약
     {
         // 씬이 종료될 때 이벤트 구독 해제
         bomb.OnCannonballCollision -= ReturnCannonball;
@@ -73,6 +76,9 @@ public class CannonballPool : MonoBehaviour//, ICannonballPool
         GameObject newCannonball = Instantiate(cannonballPrefab, position, rotation);
         Cannonball newCannonballComponent = newCannonball.AddComponent<Cannonball>();
         newCannonballComponent.SetInPool(false); // 새로 생성된 캐논볼은 풀에서 제거된 상태로 설정
+
+        newCannonball.transform.SetParent(poolParent.transform);
+        
         pool.Add(newCannonballComponent);
         return newCannonball;
     }
